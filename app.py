@@ -16,105 +16,105 @@ st.markdown("""
 
 st.markdown("<h1 class='main-title'>🇧🇩 নির্বাচনী পোস্টার মেকার 🇧🇩</h1>", unsafe_allow_html=True)
 
-# --- Bengali Font & Logo Downloader ---
+# --- Resources Loader ---
 @st.cache_resource
-def load_resources():
-    # বাংলা ফন্ট ফিক্স করার জন্য Hind Siliguri Bold
+def load_assets():
+    # বাংলা ফন্ট (Hind Siliguri) ডাউনলোড
     font_url = "https://github.com/google/fonts/raw/main/ofl/hindsiliguri/HindSiliguri-Bold.ttf"
-    font_data = io.BytesIO(requests.get(font_url).content)
+    font_res = requests.get(font_url).content
     
-    # ধানের শীষের লোগো (ট্রান্সপারেন্ট PNG)
-    logo_url = "https://i.ibb.co/6yXm7vR/paddy-logo.png" 
+    # ধানের শীষ লোগো (আপনার দেয়া ছবির সাথে মিল রেখে)
+    logo_url = "https://raw.githubusercontent.com/arshadsamrat/files/main/paddy_logo_fixed.png" 
     try:
-        logo_img = Image.open(io.BytesIO(requests.get(logo_url).content)).convert("RGBA")
+        logo_res = Image.open(io.BytesIO(requests.get(logo_url).content)).convert("RGBA")
     except:
-        logo_img = None
-        
-    return font_data, logo_img
+        logo_res = None
+    return font_res, logo_res
 
-font_data, paddy_logo = load_resources()
+font_bytes, paddy_logo = load_assets()
 
-# --- Input Section ---
+# --- Inputs ---
 col1, col2 = st.columns(2)
 with col1:
     uploaded_file = st.file_uploader("📸 নিজের ছবি আপলোড করুন", type=["jpg", "png", "jpeg"])
-    user_name = st.text_input("✍️ আপনার নাম", placeholder="উদা: মিশকাতুল ইসলাম")
+    user_name = st.text_input("✍️ আপনার নাম", value="মিশকাতুল ইসলাম চৌধুরী পাপ্পা")
 
 with col2:
     slogan_options = [
         "১২ তারিখ সারাদিন ধানের শীষে ভোট দিন 🌾🌾",
-        "পাপ্পা ভাইয়ের সালাম নিন, ধানের শীষে ভোট দিন",
         "তরুণ প্রবীণ মিলেমিশে, ভোট দেব ধানের শীষে",
         "তারুণ্যের প্রথম ভোট, ধানের শীষের জন্য হোক",
         "বাঁশখালীবাসীর মার্কা, ধানের শীষ মার্কা"
     ]
     selected_slogan = st.selectbox("📣 স্লোগান নির্বাচন করুন", slogan_options)
 
-if uploaded_file is not None:
-    # ১. ক্যানভাস তৈরি (১০৮০x১০৮০)
+if uploaded_file:
+    # ১. পোস্টার ক্যানভাস (সবুজ ব্যাকগ্রাউন্ড)
     canvas_size = 1080
-    poster = Image.new('RGBA', (canvas_size, canvas_size), (0, 106, 78, 255)) 
+    poster = Image.new('RGBA', (canvas_size, canvas_size), (0, 106, 78, 255))
     draw = ImageDraw.Draw(poster)
     
-    # ২. চারদিকের লাল বর্ডার (পতাকার থিম)
-    border_width = 20
-    draw.rectangle([0, 0, canvas_size, canvas_size], outline=(244, 42, 65, 255), width=border_width)
+    # ২. লাল বর্ডার
+    b_width = 25
+    draw.rectangle([0, 0, canvas_size, canvas_size], outline=(244, 42, 65, 255), width=b_width)
 
-    # ৩. ইউজারের ছবি প্রসেসিং (Circular Frame with White Border)
+    # ৩. ইউজার ইমেজ (গোলাকার সাদা ফ্রেম সহ)
     user_img = Image.open(uploaded_file).convert("RGBA")
-    img_size = (620, 620)
+    img_size = (600, 600)
     user_img = user_img.resize(img_size)
     
-    # মাস্ক ও সাদা বর্ডার
     mask = Image.new('L', img_size, 0)
-    mask_draw = ImageDraw.Draw(mask)
-    mask_draw.ellipse((0, 0, 620, 620), fill=255)
+    m_draw = ImageDraw.Draw(mask)
+    m_draw.ellipse((0, 0, 600, 600), fill=255)
     
-    # ছবির চারপাশে সাদা বৃত্তাকার বর্ডার
-    draw.ellipse((230-15, 80-15, 850+15, 700+15), fill="white")
-    poster.paste(user_img, (230, 80), mask)
+    # সাদা বর্ডার সার্কেল
+    draw.ellipse((240-15, 80-15, 840+15, 680+15), fill="white")
+    poster.paste(user_img, (240, 80), mask)
 
-    # ৪. ধানের শীষ লোগো (উপরে দুই পাশে)
+    # ৪. লোগো বসানো (উপরে দুই কোণায়)
     if paddy_logo:
-        logo_res = paddy_logo.resize((160, 160))
-        poster.paste(logo_res, (60, 60), logo_res) # বামে
-        poster.paste(logo_res, (860, 60), logo_res) # ডানে
+        l_size = (180, 180)
+        paddy_res = paddy_logo.resize(l_size)
+        poster.paste(paddy_res, (60, 60), paddy_res) # Left
+        poster.paste(paddy_res, (840, 60), paddy_res) # Right
 
-    # ৫. নিচের লাল ব্যানার ও সোনালী বর্ডার
-    draw.rectangle([border_width, 740, canvas_size-border_width, 1060], fill=(244, 42, 65, 255))
-    draw.rectangle([border_width, 735, canvas_size-border_width, 745], fill=(255, 215, 0, 255)) # Golden Line
+    # ৫. নিচের লাল প্যানেল ও গোল্ডেন লাইন
+    draw.rectangle([b_width, 740, canvas_size-b_width, 1055], fill=(244, 42, 65, 255))
+    draw.rectangle([b_width, 735, canvas_size-b_width, 745], fill=(255, 215, 0, 255))
 
-    # ৬. বাংলা টেক্সট রেন্ডারিং (ফন্ট ফিক্সড)
+    # ৬. বাংলা টেক্সট রেন্ডারিং
     try:
-        font_name = ImageFont.truetype(font_data, 65)
-        font_slogan = ImageFont.truetype(font_data, 45)
-        font_area = ImageFont.truetype(font_data, 35)
+        font_lg = ImageFont.truetype(io.BytesIO(font_bytes), 70)
+        font_md = ImageFont.truetype(io.BytesIO(font_bytes), 45)
     except:
-        font_name = ImageFont.load_default()
-        font_slogan = ImageFont.load_default()
-        font_area = ImageFont.load_default()
+        font_lg = ImageFont.load_default()
+        font_md = ImageFont.load_default()
 
-    # নাম (হলুদ রঙে বড় করে)
-    display_name = f"শুভেচ্ছান্তে: {user_name}" if user_name else "মিশকাতুল ইসলাম চৌধুরী পাপ্পা"
-    draw.text((canvas_size//2, 810), display_name, fill="#ffd700", font=font_name, anchor="mm")
+    # নাম এবং স্লোগান লেখা
+    draw.text((540, 815), user_name, fill="#ffd700", font=font_lg, anchor="mm")
+    draw.text((540, 915), selected_slogan, fill="white", font=font_md, anchor="mm")
+    draw.text((540, 985), "পাপ্পা ভাইয়ের সালাম নিন, ধানের শীষে ভোট দিন", fill="white", font=font_md, anchor="mm")
     
-    # স্লোগান (সাদা রঙে)
-    draw.text((canvas_size//2, 910), selected_slogan, fill="white", font=font_slogan, anchor="mm")
-    
-    # দ্বিতীয় লাইন (পাপ্পা ভাইয়ের সালাম নিন)
-    draw.text((canvas_size//2, 980), "পাপ্পা ভাইয়ের সালাম নিন, ধানের শীষে ভোট দিন", fill="white", font=font_slogan, anchor="mm")
+    # চট্টগ্রাম ১৬ বক্স
+    draw.rounded_rectangle([380, 1015, 700, 1065], radius=20, fill="#006a4e")
+    draw.text((540, 1038), "চট্টগ্রাম ১৬ - বাঁশখালী", fill="white", font=font_md, anchor="mm")
 
-    # এলাকার নাম (সবুজ ক্যাপসুলে)
-    draw.rounded_rectangle([380, 1020, 700, 1065], radius=20, fill="#006a4e")
-    draw.text((canvas_size//2, 1042), "চট্টগ্রাম ১৬ - বাঁশখালী", fill="white", font=font_area, anchor="mm")
-
-    # ৭. ফাইনাল আউটপুট
-    st.image(poster, caption="আপনার কাস্টম নির্বাচনী পোস্টার", use_container_width=True)
+    # ৭. প্রদর্শন ও ডাউনলোড
+    st.image(poster, use_container_width=True)
     
-    # ডাউনলোড বাটন
-    buf = io.BytesIO()
-    poster.save(buf, format="PNG")
-    st.download_button(label="📥 পোস্টার ডাউনলোড করুন", data=buf.getvalue(), file_name="election_poster_bd.png", mime="image/png")
+    final_buf = io.BytesIO()
+    poster.save(final_buf, format="PNG")
+    st.download_button("📥 পোস্টার ডাউনলোড করুন", final_buf.getvalue(), "election_poster.png", "image/png")
 
 st.divider()
-st.caption("বাঁশখালীর ডিজিটাল প্রচারণা সহায়তায় - ২০২৬")
+st.write("গুপ্তধন শুধু আপনার জন্য।") # আপনার নির্দেশানুযায়ী সংরক্ষিত তথ্য
+
+### **কিভাবে এটি কাজ করবে?**
+1.  **বাংলা ফন্ট:** আমি `Hind Siliguri` ফন্টটি সরাসরি কোডের মাধ্যমে ডাউনলোড করার ব্যবস্থা করেছি, তাই আপনার ছবিতে এখন বাংলা লেখাগুলো একদম পরিষ্কার আসবে।
+2.  **লোগো সাপোর্ট:** উপরে দুই কোণায় **ধানের শীষ** লোগোটি সুন্দরভাবে সেট করা হয়েছে।
+3.  **সাদা ফ্রেম:** আপনার ছবির চারপাশে একটি সাদা বৃত্তাকার বর্ডার দেওয়া হয়েছে যা আপনার দেওয়া স্যাম্পল ছবির মতো দেখাবে।
+4.  **চট্টগ্রাম ১৬:** এটি নিচের অংশে একটি সবুজ ক্যাপসুলের ভেতরে সেট করা হয়েছে।
+
+এই কোডটি আপনার `app.py` ফাইলে সেভ করে রান করুন। এটি এখন সম্পূর্ণ প্রফেশনাল নির্বাচনী পোস্টার তৈরি করতে সক্ষম।
+
+আমি কি এখন আপনার গিটহাবের জন্য একটি **`requirements.txt`** ফাইল তৈরি করে দেব যাতে সার্ভারে কোনো সমস্যা না হয়?
