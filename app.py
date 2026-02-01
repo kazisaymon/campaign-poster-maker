@@ -2,27 +2,33 @@ import streamlit as st
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import io
 import requests
-import math
+import os
 
 # --- Page Config ---
 st.set_page_config(page_title="Election Poster Maker", page_icon="🇧🇩", layout="centered")
 
-# --- Asset Loader ---
+# --- Asset Loader (Fixed OSError) ---
 @st.cache_resource
 def load_assets():
-    # Roboto Condensed for clear English text
+    # ফন্ট ডাউনলোড করে লোকাল ফাইল হিসেবে সেভ করা হচ্ছে এরর এড়াতে
+    font_path = "temp_font.ttf"
     font_url = "https://github.com/google/fonts/raw/main/ofl/robotocondensed/RobotoCondensed-Bold.ttf"
-    font_bytes = requests.get(font_url).content
     
-    # Party Logo ( ধান ও চাকা)
+    if not os.path.exists(font_path):
+        r = requests.get(font_url)
+        with open(font_path, "wb") as f:
+            f.write(r.content)
+    
+    # Party Logo
     logo_url = "https://raw.githubusercontent.com/arshadsamrat/files/main/paddy_logo_fixed.png" 
     try:
         logo_img = Image.open(io.BytesIO(requests.get(logo_url).content)).convert("RGBA")
     except:
         logo_img = None
-    return font_bytes, logo_img
+    
+    return font_path, logo_img
 
-font_data, party_logo = load_assets()
+font_path, party_logo = load_assets()
 
 # --- Custom Styling ---
 st.markdown("""
@@ -35,69 +41,67 @@ st.markdown("""
 st.markdown("<h1 class='main-title'>🇧🇩 Election Poster Maker 🇧🇩</h1>", unsafe_allow_html=True)
 
 # --- Input ---
-uploaded_file = st.file_uploader("📸 Upload Your High Quality Photo", type=["jpg", "png", "jpeg"])
+uploaded_file = st.file_uploader("📸 Upload Your Photo", type=["jpg", "png", "jpeg"])
 user_name = st.text_input("✍️ Enter Your Name", value="MISHKATUL ISLAM CHOWDHURY PAPPA")
 selected_slogan = st.selectbox("📣 Select Slogan", ["Your Vote, Your Voice!", "For a Better Banshkhali", "Development & Peace"])
 
 if uploaded_file:
     # ১. ক্যানভাস এবং ব্যাকগ্রাউন্ড
     canvas_size = 1080
-    poster = Image.new('RGBA', (canvas_size, canvas_size), (244, 42, 65, 255)) # লাল বাইরের ফ্রেম
+    poster = Image.new('RGBA', (canvas_size, canvas_size), (244, 42, 65, 255)) 
     draw = ImageDraw.Draw(poster)
     
-    # ভেতরের সবুজ ব্যাকগ্রাউন্ড (গ্রেডিয়েন্ট লুকের জন্য)
+    # ভেতরের সবুজ ব্যাকগ্রাউন্ড
     inner_bg = Image.new('RGBA', (canvas_size-60, canvas_size-60), (0, 106, 78, 255))
     poster.paste(inner_bg, (30, 30))
 
-    # ২. উপরের টাইটেল বার (গোল্ডেন)
+    # ২. উপরের গোল্ডেন বার
     draw.rounded_rectangle([150, 10, 930, 80], radius=35, fill="#ffd700")
     try:
-        font_title = ImageFont.truetype(io.BytesIO(font_data), 50)
+        font_title = ImageFont.truetype(font_path, 45)
         draw.text((540, 45), "Election Poster Maker 2026", fill="black", font=font_title, anchor="mm")
     except: pass
 
-    # ৩. ইউজারের ছবি (বৃত্তাকার এবং গ্লো ইফেক্ট)
+    # ৩. ইউজারের ছবি (Circular Frame)
     user_img = Image.open(uploaded_file).convert("RGBA")
-    img_size = (600, 600)
+    img_size = (620, 620)
     user_img = ImageOps.fit(user_img, img_size, centering=(0.5, 0.5))
     
     mask = Image.new('L', img_size, 0)
     m_draw = ImageDraw.Draw(mask)
-    m_draw.ellipse((0, 0, 600, 600), fill=255)
+    m_draw.ellipse((0, 0, 620, 620), fill=255)
     
-    # ছবির বর্ডার
-    draw.ellipse((230, 110, 850, 730), outline="white", width=15)
-    poster.paste(user_img, (240, 120), mask)
+    draw.ellipse((220, 100, 860, 740), outline="white", width=15)
+    poster.paste(user_img, (230, 110), mask)
 
-    # ৪. লোগো বসানো (টপ কর্নার)
+    # ৪. লোগো বসানো
     if party_logo:
-        l_res = party_logo.resize((160, 160))
-        poster.paste(l_res, (80, 100), l_res)
-        poster.paste(l_res, (840, 100), l_res)
+        l_res = party_logo.resize((170, 170))
+        poster.paste(l_res, (75, 100), l_res)
+        poster.paste(l_res, (835, 100), l_res)
 
-    # ৫. নিচের টেক্সট প্যানেল
-    # নামের লেখা (বড় এবং গোল্ডেন)
-    font_name = ImageFont.truetype(io.BytesIO(font_data), 80)
-    draw.text((540, 780), user_name.upper(), fill="#ffd700", font=font_name, anchor="mm")
-    
-    # স্লোগান এবং ধানের শীষ লেখা
-    font_slogan = ImageFont.truetype(io.BytesIO(font_data), 55)
-    draw.text((540, 860), selected_slogan, fill="white", font=font_slogan, anchor="mm")
-    draw.text((540, 930), "VOTE FOR PADDY SHEAF 🌾", fill="white", font=font_slogan, anchor="mm")
+    # ৫. নিচের টেক্সট ডিজাইন
+    try:
+        font_name = ImageFont.truetype(font_path, 80)
+        font_slogan = ImageFont.truetype(font_path, 55)
+        font_sm = ImageFont.truetype(font_path, 45)
+    except:
+        font_name = font_slogan = font_sm = ImageFont.load_default()
 
-    # ৬. একদম নিচের ক্যাপসুল বক্স (সবুজ)
-    draw.rounded_rectangle([280, 980, 800, 1050], radius=35, fill="#004d39")
-    font_sm = ImageFont.truetype(io.BytesIO(font_data), 45)
-    draw.text((540, 1015), "CHATTOGRAM 16 - BANSHKHALI", fill="white", font=font_sm, anchor="mm")
+    draw.text((540, 785), user_name.upper(), fill="#ffd700", font=font_name, anchor="mm")
+    draw.text((540, 865), selected_slogan, fill="white", font=font_slogan, anchor="mm")
+    draw.text((540, 935), "VOTE FOR PADDY SHEAF 🌾", fill="white", font=font_slogan, anchor="mm")
 
-    # ৭. প্রদর্শন
+    # ৬. একদম নিচের এরিয়া বক্স
+    draw.rounded_rectangle([270, 985, 810, 1055], radius=35, fill="#004d39")
+    draw.text((540, 1020), "CHATTOGRAM 16 - BANSHKHALI", fill="white", font=font_sm, anchor="mm")
+
+    # ৭. প্রদর্শন ও ডাউনলোড
     st.image(poster, use_container_width=True)
     
-    # ডাউনলোড
     final_buf = io.BytesIO()
     poster.save(final_buf, format="PNG")
     st.download_button("📥 Download This Poster", final_buf.getvalue(), "pappu_poster_2026.png", "image/png")
 
 st.divider()
-st.info("আপনার স্যাম্পল ফটোর মতো লাল বর্ডার, গোল্ডেন টাইটেল এবং প্রফেশনাল অ্যালাইনমেন্ট সেট করা হয়েছে।")
 st.write("গুপ্তধন শুধু আপনার জন্য।")
